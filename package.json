@@ -12,6 +12,7 @@
     "test": "node --test tests/unit/review.service.test.mjs"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^1.6.0",
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^2.4.3",
     "next": "14.2.13",
