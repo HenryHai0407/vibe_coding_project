@@ -10,4 +10,8 @@ export default async function DashboardPage() {
   }
 
   return <DashboardHome user={session.user} />;
+import { PagePlaceholder } from "@/components/ui/page-placeholder";
+
+export default function DashboardPage() {
+  return <PagePlaceholder title="Dashboard">MVP dashboard experience scaffolded.</PagePlaceholder>;
 }

@@ -14,6 +14,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login"
   },
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  session: { strategy: "jwt" },
   providers: [
     Credentials({
       name: "Credentials",
@@ -62,4 +67,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     }
   }
+      async authorize() {
+        return null;
+      }
+    })
+  ]
 });
