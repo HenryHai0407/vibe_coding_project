@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/components/ui/page-placeholder";
+import { ReviewSession } from "@/components/review/review-session";
 
 export default function ReviewPage() {
-  return <PagePlaceholder title="Review">MVP review experience scaffolded.</PagePlaceholder>;
+  return <ReviewSession />;
 }

@@ -12,3 +12,7 @@ export function calculateNextInterval(previousInterval: number, result: ReviewRe
   if (result === "good") return Math.max(2, Math.round(previousInterval * 2));
   return Math.max(4, Math.round(previousInterval * 3));
 }
+
+export function calculateNextReviewAt(fromDate: Date, intervalDays: number): Date {
+  return new Date(fromDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
+}
