@@ -12,10 +12,7 @@ export async function GET() {
     user: {
       id: session.user.id,
       email: session.user.email,
-      displayName: session.user.name
-    }
+      displayName: session.user.name,
+    },
   });
-
-export async function GET() {
-  return NextResponse.json({ user: null });
 }
