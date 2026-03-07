@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { PointerEvent, useMemo, useRef, useState } from "react";
 
 type ReviewResult = "again" | "hard" | "good" | "easy";
 
@@ -25,6 +25,8 @@ type ReviewSessionPayload = {
   totalCards: number;
 };
 
+const SWIPE_THRESHOLD_PX = 70;
+
 export function ReviewSession() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [cards, setCards] = useState<ReviewCard[]>([]);
@@ -33,6 +35,9 @@ export function ReviewSession() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragX, setDragX] = useState(0);
+
+  const dragStartX = useRef<number | null>(null);
 
   const currentCard = cards[index] ?? null;
   const progress = useMemo(() => (cards.length === 0 ? 0 : index + 1), [cards.length, index]);
@@ -60,6 +65,19 @@ export function ReviewSession() {
     setLoading(false);
   };
 
+  const goNextCard = () => {
+    if (index < cards.length - 1) {
+      setIndex((current) => current + 1);
+      setRevealed(false);
+      return;
+    }
+
+    setCards([]);
+    setSessionId(null);
+    setIndex(0);
+    setRevealed(false);
+  };
+
   const submitResult = async (result: ReviewResult) => {
     if (!sessionId || !currentCard) return;
     setSubmitting(true);
@@ -82,18 +100,39 @@ export function ReviewSession() {
       return;
     }
 
-    if (index < cards.length - 1) {
-      setIndex((current) => current + 1);
-      setRevealed(false);
-    } else {
-      setCards([]);
-      setSessionId(null);
-      setIndex(0);
-      setRevealed(false);
-    }
-
+    goNextCard();
     setSubmitting(false);
   };
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    dragStartX.current = event.clientX;
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragStartX.current === null || !revealed || submitting) return;
+    setDragX(event.clientX - dragStartX.current);
+  };
+
+  const onPointerUp = async () => {
+    if (dragStartX.current === null) return;
+
+    const deltaX = dragX;
+    dragStartX.current = null;
+    setDragX(0);
+
+    if (!revealed || submitting) return;
+
+    if (deltaX <= -SWIPE_THRESHOLD_PX) {
+      await submitResult("hard");
+      return;
+    }
+
+    if (deltaX >= SWIPE_THRESHOLD_PX) {
+      await submitResult("easy");
+    }
+  };
+
+  const rotation = Math.max(-12, Math.min(12, dragX / 10));
 
   return (
     <section className="space-y-4 rounded-xl border bg-white p-6 shadow-sm">
@@ -101,6 +140,7 @@ export function ReviewSession() {
         <div>
           <h1 className="text-2xl font-semibold">Flashcard review</h1>
           <p className="text-sm text-slate-600">Practice due cards and update scheduling with Again / Hard / Good / Easy.</p>
+          <p className="mt-1 text-xs text-slate-500">Tip: after reveal, swipe left = hard, swipe right = easy.</p>
         </div>
         <button
           className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -125,17 +165,25 @@ export function ReviewSession() {
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2 rounded border bg-slate-50 p-4 transition-transform duration-200 ease-out"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            style={{ transform: `translateX(${dragX}px) rotate(${rotation}deg)` }}
+          >
             <p className="text-sm text-slate-600">Prompt</p>
             <p className="text-lg font-medium text-slate-900">{currentCard.prompt}</p>
+            {!revealed ? <p className="text-xs text-slate-500">Tap reveal first, then swipe left/right to grade quickly.</p> : null}
           </div>
 
-          <button className="rounded border px-3 py-1 text-sm" onClick={() => setRevealed((current) => !current)} type="button">
+          <button className="rounded border px-3 py-1 text-sm transition hover:bg-slate-100" onClick={() => setRevealed((current) => !current)} type="button">
             {revealed ? "Hide answer" : "Reveal answer"}
           </button>
 
           {revealed ? (
-            <div className="rounded bg-slate-50 p-3">
+            <div className="rounded bg-slate-50 p-3 transition-all duration-200">
               <p className="text-xs uppercase tracking-wide text-slate-500">Answer</p>
               <p className="mt-1 text-sm font-medium text-slate-900">{currentCard.answer}</p>
               <p className="mt-2 text-xs text-slate-600">
@@ -146,16 +194,36 @@ export function ReviewSession() {
           ) : null}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button className="rounded border px-3 py-2 text-sm" disabled={!revealed || submitting} onClick={() => submitResult("again")} type="button">
+            <button
+              className="rounded border px-3 py-2 text-sm transition hover:bg-slate-100"
+              disabled={!revealed || submitting}
+              onClick={() => submitResult("again")}
+              type="button"
+            >
               Again
             </button>
-            <button className="rounded border px-3 py-2 text-sm" disabled={!revealed || submitting} onClick={() => submitResult("hard")} type="button">
+            <button
+              className="rounded border px-3 py-2 text-sm transition hover:bg-slate-100"
+              disabled={!revealed || submitting}
+              onClick={() => submitResult("hard")}
+              type="button"
+            >
               Hard
             </button>
-            <button className="rounded border px-3 py-2 text-sm" disabled={!revealed || submitting} onClick={() => submitResult("good")} type="button">
+            <button
+              className="rounded border px-3 py-2 text-sm transition hover:bg-slate-100"
+              disabled={!revealed || submitting}
+              onClick={() => submitResult("good")}
+              type="button"
+            >
               Good
             </button>
-            <button className="rounded border px-3 py-2 text-sm" disabled={!revealed || submitting} onClick={() => submitResult("easy")} type="button">
+            <button
+              className="rounded border px-3 py-2 text-sm transition hover:bg-slate-100"
+              disabled={!revealed || submitting}
+              onClick={() => submitResult("easy")}
+              type="button"
+            >
               Easy
             </button>
           </div>

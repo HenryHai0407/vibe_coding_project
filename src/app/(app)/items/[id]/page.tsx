@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { ItemActions } from "@/components/items/item-actions";
 import { ItemTagsManager } from "@/components/items/item-tags-manager";
 import { ItemExamplesManager } from "@/components/items/item-examples-manager";
+import { ItemIllustration } from "@/components/items/item-illustration";
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -91,6 +92,9 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           }))}
         />
       </div>
+
+
+      <ItemIllustration itemId={item.id} />
 
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-slate-800">Generated review cards</h2>
