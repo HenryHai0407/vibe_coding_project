@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  passwordHash   String
+  displayName    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  learningItems  LearningItem[]
+  tags           Tag[]
+  reviewSessions ReviewSession[]
+}
+
+model LearningItem {
+  id              String            @id @default(uuid())
+  userId          String
+  type            LearningItemType
+  finnishText     String
+  baseTranslation String?
+  explanation     String?
+  usageNote       String?
+  sourceContext   String?
+  difficulty      Int               @default(2)
+  archivedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examples    ExampleSentence[]
+  itemTags    LearningItemTag[]
+  reviewCards ReviewCard[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ExampleSentence {
+  id                 String   @id @default(uuid())
+  learningItemId     String
+  finnishSentence    String
+  englishTranslation String?
+  note               String?
+  isUserWritten      Boolean  @default(true)
+  position           Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  learningItem LearningItem @relation(fields: [learningItemId], references: [id], onDelete: Cascade)
+
+  @@index([learningItemId])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemTags LearningItemTag[]
+
+  @@unique([userId, name])
+}
+
+model LearningItemTag {
+  learningItemId String
+  tagId          String
+
+  learningItem LearningItem @relation(fields: [learningItemId], references: [id], onDelete: Cascade)
+  tag          Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([learningItemId, tagId])
+}
+
+model ReviewCard {
+  id              String         @id @default(uuid())
+  learningItemId  String
+  cardType        ReviewCardType
+  prompt          String
+  answer          String
+  nextReviewAt    DateTime       @default(now())
+  intervalDays    Int            @default(0)
+  easeFactor      Decimal        @default(2.5)
+  repetitionCount Int            @default(0)
+  lastReviewedAt  DateTime?
+  suspended       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  learningItem LearningItem   @relation(fields: [learningItemId], references: [id], onDelete: Cascade)
+  attempts     ReviewAttempt[]
+
+  @@index([learningItemId])
+  @@index([nextReviewAt])
+}
+
+model ReviewSession {
+  id          String   @id @default(uuid())
+  userId      String
+  mode        ReviewMode
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts ReviewAttempt[]
+
+  @@index([userId])
+}
+
+model ReviewAttempt {
+  id              String   @id @default(uuid())
+  reviewSessionId String
+  reviewCardId    String
+  result          ReviewResult
+  responseText    String?
+  responseMs      Int?
+  createdAt       DateTime @default(now())
+
+  reviewSession ReviewSession @relation(fields: [reviewSessionId], references: [id], onDelete: Cascade)
+  reviewCard    ReviewCard    @relation(fields: [reviewCardId], references: [id], onDelete: Cascade)
+
+  @@index([reviewSessionId])
+  @@index([reviewCardId])
+}
+
+enum LearningItemType {
+  word
+  phrase
+  grammar
+  note
+}
+
+enum ReviewCardType {
+  recognition
+  recall
+  cloze
+  sentence_prompt
+}
+
+enum ReviewMode {
+  flashcard
+  quiz
+}
+
+enum ReviewResult {
+  again
+  hard
+  good
+  easy
+  correct
+  incorrect
+}
