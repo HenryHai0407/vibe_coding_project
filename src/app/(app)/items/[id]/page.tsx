@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ItemActions } from "@/components/items/item-actions";
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -33,9 +34,12 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           <h1 className="text-2xl font-semibold">{item.finnishText}</h1>
           <p className="text-slate-700">{item.baseTranslation ?? "No translation"}</p>
         </div>
-        <Link href="/items" className="rounded border px-3 py-2 text-sm">
-          Back to items
-        </Link>
+        <div className="flex flex-col items-end gap-2">
+          <Link href="/items" className="rounded border px-3 py-2 text-sm">
+            Back to items
+          </Link>
+          <ItemActions itemId={item.id} archivedAt={item.archivedAt ? item.archivedAt.toISOString() : null} />
+        </div>
       </div>
 
       {item.explanation ? (
