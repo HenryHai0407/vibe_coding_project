@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/components/ui/page-placeholder";
+import { QuizSession } from "@/components/quiz/quiz-session";
 
-export default function QuizSessionPage() {
-  return <PagePlaceholder title="Quiz Session">Interactive quiz attempt UI scaffolded.</PagePlaceholder>;
+export default function QuizSessionPage({ params }: { params: { id: string } }) {
+  return <QuizSession sessionId={params.id} />;
 }

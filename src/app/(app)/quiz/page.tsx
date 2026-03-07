@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/components/ui/page-placeholder";
+import { QuizStart } from "@/components/quiz/quiz-start";
 
 export default function QuizPage() {
-  return <PagePlaceholder title="Quiz">MVP quiz experience scaffolded.</PagePlaceholder>;
+  return <QuizStart />;
 }
