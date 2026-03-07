@@ -26,6 +26,10 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           include: {
             tag: true
           }
+        },
+        reviewCards: {
+          where: { suspended: false },
+          orderBy: { createdAt: "asc" }
         }
       }
     }),
@@ -86,6 +90,23 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
             note: example.note
           }))}
         />
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-slate-800">Generated review cards</h2>
+        {item.reviewCards.length === 0 ? (
+          <p className="text-sm text-slate-600">No review cards yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {item.reviewCards.map((card) => (
+              <div key={card.id} className="rounded border p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">{card.cardType.replace("_", " ")}</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{card.prompt}</p>
+                <p className="mt-1 text-sm text-slate-700">Answer: {card.answer}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

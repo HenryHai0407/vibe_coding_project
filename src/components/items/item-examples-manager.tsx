@@ -37,7 +37,8 @@ export function ItemExamplesManager({ itemId, initialExamples }: ItemExamplesMan
       return;
     }
 
-    setExamples((current) => [...current, data.example]);
+    const createdExample = data.example;
+    setExamples((current) => [...current, createdExample]);
     setFinnishSentence("");
     setEnglishTranslation("");
     setNote("");
@@ -71,7 +72,8 @@ export function ItemExamplesManager({ itemId, initialExamples }: ItemExamplesMan
       return;
     }
 
-    setExamples((current) => current.map((item) => (item.id === example.id ? data.example! : item)));
+    const updatedExample = data.example;
+    setExamples((current) => current.map((item) => (item.id === example.id ? updatedExample : item)));
   };
 
   const deleteExample = async (exampleId: string) => {

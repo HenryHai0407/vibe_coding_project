@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { updateItemSchema } from "@/server/schemas/item.schema";
+import { buildReviewCardsForItem, shouldRegenerateReviewCards } from "@/server/services/review-card-generator.service";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -20,6 +21,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       },
       itemTags: {
         include: { tag: true }
+      },
+      reviewCards: {
+        orderBy: { createdAt: "asc" }
       }
     }
   });
@@ -47,7 +51,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       id: params.id,
       userId: session.user.id
     },
-    select: { id: true }
+    include: {
+      examples: { orderBy: { position: "asc" } }
+    }
   });
 
   if (!existing) {
@@ -73,9 +79,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     },
     select: {
       id: true,
-      updatedAt: true
+      updatedAt: true,
+      type: true,
+      finnishText: true,
+      baseTranslation: true,
+      explanation: true,
+      usageNote: true,
+      sourceContext: true
     }
   });
+
+  let nextExamples = existing.examples.map((example) => ({
+    finnishSentence: example.finnishSentence,
+    englishTranslation: example.englishTranslation
+  }));
 
   if (parsed.data.examples) {
     await db.exampleSentence.deleteMany({ where: { learningItemId: params.id } });
@@ -90,6 +107,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         }))
       });
     }
+
+    nextExamples = parsed.data.examples.map((example) => ({
+      finnishSentence: example.finnishSentence,
+      englishTranslation: example.englishTranslation ?? null
+    }));
   }
 
   if (parsed.data.tagIds) {
@@ -106,6 +128,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       await db.learningItemTag.createMany({
         data: ownedTags.map((tag) => ({ learningItemId: params.id, tagId: tag.id })),
         skipDuplicates: true
+      });
+    }
+  }
+
+  if (shouldRegenerateReviewCards(Object.keys(parsed.data))) {
+    const regeneratedCards = buildReviewCardsForItem({
+      type: parsed.data.type ?? updated.type,
+      finnishText: parsed.data.finnishText ?? updated.finnishText,
+      baseTranslation: parsed.data.baseTranslation ?? updated.baseTranslation,
+      explanation: parsed.data.explanation ?? updated.explanation,
+      examples: nextExamples
+    });
+
+    await db.reviewCard.deleteMany({ where: { learningItemId: params.id } });
+    if (regeneratedCards.length > 0) {
+      await db.reviewCard.createMany({
+        data: regeneratedCards.map((card) => ({
+          learningItemId: params.id,
+          cardType: card.cardType,
+          prompt: card.prompt,
+          answer: card.answer
+        }))
       });
     }
   }

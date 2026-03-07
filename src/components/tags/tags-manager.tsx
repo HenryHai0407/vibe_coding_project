@@ -37,7 +37,8 @@ export function TagsManager({ initialTags }: TagsManagerProps) {
       return;
     }
 
-    setTags((current) => [...current, data.tag].sort((a, b) => a.name.localeCompare(b.name)));
+    const createdTag = data.tag;
+    setTags((current) => [...current, createdTag].sort((a, b) => a.name.localeCompare(b.name)));
     setName("");
     setLoading(false);
   };
