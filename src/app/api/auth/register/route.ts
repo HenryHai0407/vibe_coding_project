@@ -41,4 +41,8 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+import { NextResponse } from "next/server";
+
+export async function POST() {
+  return NextResponse.json({ message: "register endpoint scaffolded" }, { status: 501 });
 }

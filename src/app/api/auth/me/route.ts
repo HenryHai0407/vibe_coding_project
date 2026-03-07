@@ -15,4 +15,7 @@ export async function GET() {
       displayName: session.user.name
     }
   });
+
+export async function GET() {
+  return NextResponse.json({ user: null });
 }
