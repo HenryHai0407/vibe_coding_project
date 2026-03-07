@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
-  displayName: z.string().min(1).max(80),
+  displayName: z.string().min(1).max(80)
 });
 
 export async function POST(request: Request) {
@@ -25,22 +25,19 @@ export async function POST(request: Request) {
       data: {
         email,
         passwordHash,
-        displayName: parsed.data.displayName.trim(),
+        displayName: parsed.data.displayName.trim()
       },
       select: {
         id: true,
         email: true,
-        displayName: true,
-      },
+        displayName: true
+      }
     });
 
     return NextResponse.json({ user }, { status: 201 });
   } catch {
     return NextResponse.json(
-      {
-        message:
-          "Unable to create account. Please verify your input and try again.",
-      },
+      { message: "Unable to create account. Please verify your input and try again." },
       { status: 400 }
     );
   }
