@@ -9,7 +9,9 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "test": "node --test tests/unit/*.test.mjs"
+    "test": "node --test tests/unit/*.test.mjs",
+    "prisma:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -33,5 +35,8 @@
     "tailwindcss": "3.4.13",
     "typescript": "5.6.2"
   },
-  "type": "module"
+  "type": "module",
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
+  }
 }

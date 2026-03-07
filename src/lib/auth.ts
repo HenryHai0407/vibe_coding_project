@@ -3,6 +3,8 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -28,16 +30,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const email = parsed.data.email.toLowerCase();
+        const loginLimiter = checkRateLimit({
+          key: `login:${email}`,
+          windowMs: 60_000,
+          maxRequests: 15
+        });
+
+        if (loginLimiter.limited) {
+          logger.warn("rate_limit.login", { email });
+          return null;
+        }
+
         const user = await db.user.findUnique({ where: { email } });
         if (!user) {
+          logger.warn("auth.login.failed", { email, reason: "invalid_credentials" });
           return null;
         }
 
         const isValidPassword = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!isValidPassword) {
+          logger.warn("auth.login.failed", { email, reason: "invalid_credentials" });
           return null;
         }
 
+        logger.info("auth.login.success", { userId: user.id, email });
         return {
           id: user.id,
           email: user.email,

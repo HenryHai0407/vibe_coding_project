@@ -1,28 +1,69 @@
-# Finnish Learning Workspace (MVP Scaffold)
+# Finnish Learning Workspace (MVP)
 
-This repository contains a web-first MVP foundation for a Finnish learning app built with:
+Web-first MVP for learning Finnish with authenticated item management, review cards, and quiz practice.
+
+## Stack
 
 - Next.js App Router + Route Handlers
 - TypeScript + Tailwind CSS
 - Auth.js credentials authentication
-- Prisma + PostgreSQL schema
-- Layered server folders for repositories/services/schemas/mappers
+- Prisma + PostgreSQL
+- Zod validation
 
-## Implemented now
+## Implemented milestones
 
-- Route and folder structure for all MVP pages.
-- Functional auth milestone flow:
-  - register via `POST /api/auth/register`
-  - sign in with Auth.js credentials
-  - sign out action on dashboard
-  - protected app routes via authenticated `(app)` layout
-- API route scaffolds for items/examples/tags/review/quiz endpoints.
-- Prisma schema for users, learning items, tags, review cards/sessions/attempts.
-- Basic review interval calculation service (`calculateNextInterval`) with unit tests.
+- Foundation + auth flow
+- Learning item CRUD + archive
+- Tags and examples management
+- Search/filter/pagination/sort for items
+- Review card generation
+- Flashcard review flow (`/review`)
+- Quiz flow (`/quiz`, `/quiz/session/[id]`)
+- Dashboard + history insights (`/dashboard`, `/history`)
+- Production hardening basics:
+  - structured logs
+  - auth/register rate limit
+  - app loading/error boundaries
+  - seed script + migrate deploy script
 
-## Next implementation tasks
+## Environment
 
-1. Implement learning item CRUD through repositories/services.
-2. Add ownership checks and server validation for all write routes.
-3. Build tags/examples management and list filtering.
-4. Implement review and quiz route business logic end to end.
+Create `.env` (or `.env.local`) with at least:
+
+```bash
+DATABASE_URL="postgresql://..."
+NEXTAUTH_SECRET="replace-with-long-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+## Getting started
+
+```bash
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run seed
+npm run dev
+```
+
+## Scripts
+
+- `npm run dev` — start dev server
+- `npm run lint` — run Next.js lint
+- `npm run test` — run unit tests in `tests/unit`
+- `npm run build` — production build
+- `npm run prisma:migrate` — run dev migrations
+- `npm run prisma:deploy` — deploy migrations (prod style)
+- `npm run seed` — seed demo user/data
+
+## Demo seed account
+
+After `npm run seed`:
+
+- Email: `demo@example.com`
+- Password: `demo12345`
+
+## Notes
+
+- Current production build may fail if login page uses client-side search params without Suspense; this has been wrapped with `Suspense` in this repo.
+- Auth.js requires `NEXTAUTH_SECRET` for protected route flow.
