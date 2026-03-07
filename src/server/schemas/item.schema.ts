@@ -29,6 +29,7 @@ export const updateItemSchema = z
     usageNote: z.string().optional(),
     sourceContext: z.string().optional(),
     difficulty: z.number().int().min(1).max(5).optional(),
+    tagIds: z.array(z.string()).optional(),
     examples: z.array(exampleSchema).optional()
   })
   .refine((payload) => Object.keys(payload).length > 0, {

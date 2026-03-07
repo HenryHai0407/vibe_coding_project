@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ItemActions } from "@/components/items/item-actions";
+import { ItemTagsManager } from "@/components/items/item-tags-manager";
+import { ItemExamplesManager } from "@/components/items/item-examples-manager";
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -10,21 +12,36 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
     notFound();
   }
 
-  const item = await db.learningItem.findFirst({
-    where: {
-      id: params.id,
-      userId: session.user.id
-    },
-    include: {
-      examples: {
-        orderBy: { position: "asc" }
+  const [item, allTags] = await Promise.all([
+    db.learningItem.findFirst({
+      where: {
+        id: params.id,
+        userId: session.user.id
+      },
+      include: {
+        examples: {
+          orderBy: { position: "asc" }
+        },
+        itemTags: {
+          include: {
+            tag: true
+          }
+        }
       }
-    }
-  });
+    }),
+    db.tag.findMany({
+      where: {
+        userId: session.user.id
+      },
+      orderBy: { name: "asc" }
+    })
+  ]);
 
   if (!item) {
     notFound();
   }
+
+  const selectedTagIds = item.itemTags.map((entry) => entry.tagId);
 
   return (
     <section className="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
@@ -49,20 +66,26 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
         </div>
       ) : null}
 
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-slate-800">Tags</h2>
+        <ItemTagsManager
+          itemId={item.id}
+          allTags={allTags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))}
+          selectedTagIds={selectedTagIds}
+        />
+      </div>
+
       <div>
         <h2 className="text-sm font-semibold text-slate-800">Examples</h2>
-        {item.examples.length === 0 ? (
-          <p className="text-sm text-slate-600">No examples added.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {item.examples.map((example) => (
-              <li key={example.id} className="rounded border p-3 text-sm">
-                <p className="font-medium">{example.finnishSentence}</p>
-                {example.englishTranslation ? <p className="text-slate-600">{example.englishTranslation}</p> : null}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ItemExamplesManager
+          itemId={item.id}
+          initialExamples={item.examples.map((example) => ({
+            id: example.id,
+            finnishSentence: example.finnishSentence,
+            englishTranslation: example.englishTranslation,
+            note: example.note
+          }))}
+        />
       </div>
     </section>
   );

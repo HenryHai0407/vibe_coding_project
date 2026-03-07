@@ -17,6 +17,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     include: {
       examples: {
         orderBy: { position: "asc" }
+      },
+      itemTags: {
+        include: { tag: true }
       }
     }
   });
@@ -25,7 +28,12 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     return NextResponse.json({ message: "Item not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ item });
+  return NextResponse.json({
+    item: {
+      ...item,
+      tags: item.itemTags.map((entry) => ({ id: entry.tag.id, name: entry.tag.name, color: entry.tag.color }))
+    }
+  });
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -80,6 +88,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           note: example.note?.trim() || null,
           position: index
         }))
+      });
+    }
+  }
+
+  if (parsed.data.tagIds) {
+    const ownedTags = await db.tag.findMany({
+      where: {
+        userId: session.user.id,
+        id: { in: parsed.data.tagIds }
+      },
+      select: { id: true }
+    });
+
+    await db.learningItemTag.deleteMany({ where: { learningItemId: params.id } });
+    if (ownedTags.length > 0) {
+      await db.learningItemTag.createMany({
+        data: ownedTags.map((tag) => ({ learningItemId: params.id, tagId: tag.id })),
+        skipDuplicates: true
       });
     }
   }

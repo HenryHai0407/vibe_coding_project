@@ -3,27 +3,47 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createItemSchema } from "@/server/schemas/item.schema";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const tagId = url.searchParams.get("tagId");
+
   const items = await db.learningItem.findMany({
     where: {
       userId: session.user.id,
-      archivedAt: null
+      archivedAt: null,
+      ...(tagId
+        ? {
+            itemTags: {
+              some: {
+                tagId
+              }
+            }
+          }
+        : {})
     },
     orderBy: { createdAt: "desc" },
     include: {
       examples: {
         orderBy: { position: "asc" }
+      },
+      itemTags: {
+        include: {
+          tag: true
+        }
       }
     }
   });
 
   return NextResponse.json({
-    items,
+    items: items.map((item) => ({
+      ...item,
+      tags: item.itemTags.map((entry) => ({ id: entry.tag.id, name: entry.tag.name, color: entry.tag.color }))
+    })),
     pagination: {
       page: 1,
       pageSize: items.length,
@@ -45,6 +65,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid item payload." }, { status: 400 });
   }
 
+  const ownedTags = await db.tag.findMany({
+    where: {
+      userId: session.user.id,
+      id: {
+        in: parsed.data.tagIds
+      }
+    },
+    select: { id: true }
+  });
+
   const item = await db.learningItem.create({
     data: {
       userId: session.user.id,
@@ -62,6 +92,12 @@ export async function POST(request: Request) {
           note: example.note?.trim() || null,
           position: index
         }))
+      },
+      itemTags: {
+        createMany: {
+          data: ownedTags.map((tag) => ({ tagId: tag.id })),
+          skipDuplicates: true
+        }
       }
     },
     select: {

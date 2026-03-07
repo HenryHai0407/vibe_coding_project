@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type LearningItemType = "word" | "phrase" | "grammar" | "note";
 
@@ -9,6 +9,12 @@ type ExampleInput = {
   finnishSentence: string;
   englishTranslation: string;
   note: string;
+};
+
+type Tag = {
+  id: string;
+  name: string;
+  color: string | null;
 };
 
 const defaultExample: ExampleInput = {
@@ -29,6 +35,25 @@ export function NewItemForm() {
   const [examples, setExamples] = useState<ExampleInput[]>([{ ...defaultExample }]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTags() {
+      const response = await fetch("/api/tags");
+      const data = (await response.json().catch(() => null)) as { tags?: Tag[] } | null;
+      if (!cancelled && data?.tags) {
+        setAvailableTags(data.tags);
+      }
+    }
+
+    void loadTags();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hasExample = useMemo(() => examples.some((example) => example.finnishSentence.trim()), [examples]);
 
@@ -42,6 +67,15 @@ export function NewItemForm() {
 
   const removeExample = (index: number) => {
     setExamples((current) => (current.length === 1 ? current : current.filter((_, i) => i !== index)));
+  };
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds((current) => {
+      const next = new Set(current);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -74,7 +108,7 @@ export function NewItemForm() {
             englishTranslation: example.englishTranslation.trim() || undefined,
             note: example.note.trim() || undefined
           })),
-        tagIds: []
+        tagIds: Array.from(selectedTagIds)
       })
     });
 
@@ -144,6 +178,29 @@ export function NewItemForm() {
             <span className="text-sm font-medium">Source context</span>
             <input className="w-full rounded border px-3 py-2" value={sourceContext} onChange={(event) => setSourceContext(event.target.value)} />
           </label>
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">Tags</h2>
+          {availableTags.length === 0 ? (
+            <p className="text-xs text-slate-500">No tags yet. Create tags from the Tags page.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => {
+                const selected = selectedTagIds.has(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    className={`rounded border px-3 py-1 text-sm ${selected ? "bg-slate-900 text-white" : ""}`}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
