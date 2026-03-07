@@ -27,47 +27,59 @@ async function main() {
     }
   });
 
-  const item = await db.learningItem.create({
-    data: {
+  const existingItem = await db.learningItem.findFirst({
+    where: {
       userId: user.id,
-      type: "word",
-      finnishText: "kiitos",
-      baseTranslation: "thank you",
-      explanation: "A common way to express thanks",
-      difficulty: 1,
-      itemTags: {
-        create: {
-          tagId: basicsTag.id
-        }
-      },
-      examples: {
-        create: [
-          {
-            finnishSentence: "Kiitos avusta!",
-            englishTranslation: "Thanks for the help!",
-            position: 0
-          }
-        ]
-      },
-      reviewCards: {
-        create: [
-          {
-            cardType: "recognition",
-            prompt: "What does this mean: kiitos?",
-            answer: "thank you"
-          },
-          {
-            cardType: "recall",
-            prompt: "What is the Finnish for: thank you?",
-            answer: "kiitos"
-          }
-        ]
-      }
+      finnishText: "kiitos"
     },
     select: { id: true }
   });
 
-  console.info(`Seed complete. Demo user: ${email} / demo12345. Item id: ${item.id}`);
+  const itemId =
+    existingItem?.id ??
+    (
+      await db.learningItem.create({
+        data: {
+          userId: user.id,
+          type: "word",
+          finnishText: "kiitos",
+          baseTranslation: "thank you",
+          explanation: "A common way to express thanks",
+          difficulty: 1,
+          itemTags: {
+            create: {
+              tagId: basicsTag.id
+            }
+          },
+          examples: {
+            create: [
+              {
+                finnishSentence: "Kiitos avusta!",
+                englishTranslation: "Thanks for the help!",
+                position: 0
+              }
+            ]
+          },
+          reviewCards: {
+            create: [
+              {
+                cardType: "recognition",
+                prompt: "What does this mean: kiitos?",
+                answer: "thank you"
+              },
+              {
+                cardType: "recall",
+                prompt: "What is the Finnish for: thank you?",
+                answer: "kiitos"
+              }
+            ]
+          }
+        },
+        select: { id: true }
+      })
+    ).id;
+
+  console.info(`Seed complete. Demo user: ${email} / demo12345. Item id: ${itemId}`);
 }
 
 main()

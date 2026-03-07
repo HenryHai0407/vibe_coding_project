@@ -65,5 +65,4 @@ After `npm run seed`:
 
 ## Notes
 
-- Current production build may fail if login page uses client-side search params without Suspense; this has been wrapped with `Suspense` in this repo.
 - Auth.js requires `NEXTAUTH_SECRET` for protected route flow.

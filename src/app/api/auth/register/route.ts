@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
   try {
-    const user = await db.user.create({
+    await db.user.create({
       data: {
         email,
         passwordHash,
@@ -65,8 +65,8 @@ export async function POST(request: Request) {
       }
     });
 
-    logger.info("auth.register.success", { userId: user.id, email });
-    return NextResponse.json({ user }, { status: 201 });
+    logger.info("auth.register.success", { email });
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     logger.warn("auth.register.failed", {
       email,

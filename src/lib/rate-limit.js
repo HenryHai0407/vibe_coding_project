@@ -1,7 +1,20 @@
 const buckets = new Map();
 
+function cleanupExpiredBuckets(now) {
+  for (const [key, bucket] of buckets.entries()) {
+    if (bucket.resetAt <= now) {
+      buckets.delete(key);
+    }
+  }
+}
+
 export function checkRateLimit(config) {
   const now = Date.now();
+
+  if (buckets.size > 10_000) {
+    cleanupExpiredBuckets(now);
+  }
+
   const existing = buckets.get(config.key);
 
   if (!existing || existing.resetAt <= now) {
@@ -29,4 +42,8 @@ export function checkRateLimit(config) {
     limited: false,
     retryAfterSeconds: Math.max(1, Math.ceil((existing.resetAt - now) / 1000))
   };
+}
+
+export function __internalRateLimitReset() {
+  buckets.clear();
 }
