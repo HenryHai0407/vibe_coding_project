@@ -1,3 +1,7 @@
+import { RegisterForm } from "@/components/auth/register-form";
+
+export default function RegisterPage() {
+  return <RegisterForm />;
 import { PagePlaceholder } from "@/components/ui/page-placeholder";
 
 export default function RegisterPage() {

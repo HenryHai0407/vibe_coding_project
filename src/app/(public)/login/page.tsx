@@ -1,3 +1,7 @@
+import { LoginForm } from "@/components/auth/login-form";
+
+export default function LoginPage() {
+  return <LoginForm />;
 import { PagePlaceholder } from "@/components/ui/page-placeholder";
 
 export default function LoginPage() {
