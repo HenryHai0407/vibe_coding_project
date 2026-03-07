@@ -10,7 +10,8 @@ type DashboardHomeProps = {
   summary: {
     dueCount: number;
     itemsAddedThisWeek: number;
-    quizAttemptsThisWeek: number;
+    quizPracticeTurnsThisWeek: number;
+    quizQuestionAttemptsThisWeek: number;
     quizCorrectThisWeek: number;
   };
   recentItems: Array<{
@@ -29,7 +30,7 @@ type DashboardHomeProps = {
 };
 
 export function DashboardHome({ user, summary, recentItems, recentSessions }: DashboardHomeProps) {
-  const quizAccuracy = summary.quizAttemptsThisWeek > 0 ? Math.round((summary.quizCorrectThisWeek / summary.quizAttemptsThisWeek) * 100) : null;
+  const quizAccuracy = summary.quizQuestionAttemptsThisWeek > 0 ? Math.round((summary.quizCorrectThisWeek / summary.quizQuestionAttemptsThisWeek) * 100) : null;
 
   return (
     <section className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
@@ -60,12 +61,15 @@ export function DashboardHome({ user, summary, recentItems, recentSessions }: Da
           <p className="mt-2 text-2xl font-semibold">{summary.itemsAddedThisWeek}</p>
         </div>
         <div className="rounded border p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Quiz attempts (7d)</p>
-          <p className="mt-2 text-2xl font-semibold">{summary.quizAttemptsThisWeek}</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Quiz practice turns (7d)</p>
+          <p className="mt-2 text-2xl font-semibold">{summary.quizPracticeTurnsThisWeek}</p>
         </div>
         <div className="rounded border p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Quiz accuracy</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Quiz accuracy (question-level)</p>
           <p className="mt-2 text-2xl font-semibold">{quizAccuracy === null ? "-" : `${quizAccuracy}%`}</p>
+          <p className="mt-1 text-xs text-slate-600">
+            {summary.quizCorrectThisWeek}/{summary.quizQuestionAttemptsThisWeek} correct
+          </p>
         </div>
       </div>
 

@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [dueCount, itemsAddedThisWeek, recentItems, recentReviewSessions, quizAttemptsThisWeek, quizCorrectThisWeek] = await Promise.all([
+  const [dueCount, itemsAddedThisWeek, recentItems, recentReviewSessions, quizPracticeTurnsThisWeek, quizQuestionAttemptsThisWeek, quizCorrectThisWeek] = await Promise.all([
     db.reviewCard.count({
       where: {
         suspended: false,
@@ -55,6 +55,13 @@ export default async function DashboardPage() {
         }
       }
     }),
+    db.reviewSession.count({
+      where: {
+        userId: session.user.id,
+        mode: "quiz",
+        startedAt: { gte: oneWeekAgo }
+      }
+    }),
     db.reviewAttempt.count({
       where: {
         createdAt: { gte: oneWeekAgo },
@@ -82,7 +89,8 @@ export default async function DashboardPage() {
       summary={{
         dueCount,
         itemsAddedThisWeek,
-        quizAttemptsThisWeek,
+        quizPracticeTurnsThisWeek,
+        quizQuestionAttemptsThisWeek,
         quizCorrectThisWeek
       }}
       recentItems={recentItems}
