@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { auth } from "@/lib/auth";
+import { QuickAddFab } from "@/components/items/quick-add-fab";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {children}
+      <QuickAddFab />
     </div>
   );
 }

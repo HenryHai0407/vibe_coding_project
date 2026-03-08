@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 type ItemsSearchParams = {
+  view?: "all" | "due" | "new" | "mistakes" | "grammar" | "archived";
   query?: string;
   type?: "word" | "phrase" | "grammar" | "note";
   tagId?: string;
@@ -24,25 +25,71 @@ function buildQueryString(base: Record<string, string | undefined>) {
   return params.toString();
 }
 
+const viewTabs: Array<{ key: NonNullable<ItemsSearchParams["view"]>; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "due", label: "Due" },
+  { key: "new", label: "New" },
+  { key: "mistakes", label: "Mistakes" },
+  { key: "grammar", label: "Grammar" },
+  { key: "archived", label: "Archived" }
+];
+
 export default async function ItemsPage({ searchParams }: { searchParams?: ItemsSearchParams }) {
   const session = await auth();
   if (!session?.user?.id) {
     return null;
   }
 
+  const now = new Date();
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
   const query = searchParams?.query?.trim();
+  const view = viewTabs.some((tab) => tab.key === searchParams?.view) ? (searchParams?.view as NonNullable<ItemsSearchParams["view"]>) : "all";
   const type = searchParams?.type;
   const tagId = searchParams?.tagId;
-  const archived = searchParams?.archived === "true";
-  const dueOnly = searchParams?.dueOnly === "true";
   const sort = searchParams?.sort === "oldest" ? "oldest" : "newest";
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
   const pageSize = Math.min(100, Math.max(1, Number(searchParams?.pageSize ?? "20") || 20));
 
+  const archived = view === "archived" ? true : searchParams?.archived === "true";
+  const dueOnly = view === "due" ? true : searchParams?.dueOnly === "true";
+  const newOnly = view === "new";
+  const grammarOnly = view === "grammar";
+  const mistakesOnly = view === "mistakes";
+  const effectiveType = grammarOnly ? "grammar" : type;
+
+  const mistakeItemIds = mistakesOnly
+    ? Array.from(
+        new Set(
+          (
+            await db.reviewAttempt.findMany({
+              where: {
+                createdAt: { gte: twoWeeksAgo },
+                result: "incorrect",
+                reviewSession: {
+                  userId: session.user.id,
+                  mode: "quiz"
+                }
+              },
+              orderBy: { createdAt: "desc" },
+              take: 250,
+              select: {
+                reviewCard: {
+                  select: {
+                    learningItemId: true
+                  }
+                }
+              }
+            })
+          ).map((attempt) => attempt.reviewCard.learningItemId)
+        )
+      )
+    : [];
+
   const where: Prisma.LearningItemWhereInput = {
     userId: session.user.id,
     ...(archived ? {} : { archivedAt: null }),
-    ...(type ? { type } : {}),
+    ...(effectiveType ? { type: effectiveType } : {}),
     ...(tagId
       ? {
           itemTags: {
@@ -75,9 +122,26 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
             some: {
               suspended: false,
               nextReviewAt: {
-                lte: new Date()
+                lte: now
               }
             }
+          }
+        }
+      : {}),
+    ...(newOnly
+      ? {
+          reviewCards: {
+            some: {
+              suspended: false,
+              repetitionCount: 0
+            }
+          }
+        }
+      : {}),
+    ...(mistakesOnly
+      ? {
+          id: {
+            in: mistakeItemIds
           }
         }
       : {})
@@ -112,6 +176,7 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const sharedParams: Record<string, string | undefined> = {
+    view: view === "all" ? undefined : view,
     query: query || undefined,
     type,
     tagId,
@@ -126,6 +191,18 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
   const prevQuery = buildQueryString({ ...sharedParams, page: String(Math.max(1, page - 1)) });
   const nextQuery = buildQueryString({ ...sharedParams, page: String(Math.min(totalPages, page + 1)) });
 
+  const tabHref = (tabKey: NonNullable<ItemsSearchParams["view"]>) => {
+    const base: Record<string, string | undefined> = {
+      ...sharedParams,
+      view: tabKey === "all" ? undefined : tabKey,
+      page: "1"
+    };
+    if (tabKey === "due") base.dueOnly = undefined;
+    if (tabKey === "archived") base.archived = undefined;
+    if (tabKey === "grammar") base.type = undefined;
+    return `/items?${buildQueryString(base)}`;
+  };
+
   return (
     <section className="space-y-4 rounded-xl border bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -133,6 +210,21 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
         <Link href="/items/new" className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
           + Add item
         </Link>
+      </div>
+
+      <div className="flex flex-wrap gap-2 rounded border p-2">
+        {viewTabs.map((tab) => {
+          const active = view === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={tabHref(tab.key)}
+              className={`rounded-full px-3 py-1.5 text-sm ${active ? "bg-slate-900 text-white" : "border text-slate-700 hover:bg-slate-50"}`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
       </div>
 
       <form className="grid gap-3 rounded border p-3 sm:grid-cols-2 lg:grid-cols-4" method="GET">
@@ -167,10 +259,11 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
         <input className="rounded border px-3 py-2 text-sm" type="date" name="dateFrom" defaultValue={searchParams?.dateFrom ?? ""} />
         <input className="rounded border px-3 py-2 text-sm" type="date" name="dateTo" defaultValue={searchParams?.dateTo ?? ""} />
 
+        <input type="hidden" name="view" value={view} />
         <input type="hidden" name="page" value="1" />
         <input type="hidden" name="pageSize" value={pageSize} />
 
-        <div className="sm:col-span-2 lg:col-span-4 flex gap-2">
+        <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
           <button className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white" type="submit">
             Apply filters
           </button>
@@ -210,16 +303,10 @@ export default async function ItemsPage({ searchParams }: { searchParams?: Items
           Page {page} of {totalPages} · {total} items
         </p>
         <div className="flex gap-2">
-          <Link
-            href={`/items?${prevQuery}`}
-            className={`rounded border px-3 py-1 ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}
-          >
+          <Link href={`/items?${prevQuery}`} className={`rounded border px-3 py-1 ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}>
             Previous
           </Link>
-          <Link
-            href={`/items?${nextQuery}`}
-            className={`rounded border px-3 py-1 ${page >= totalPages ? "pointer-events-none opacity-50" : ""}`}
-          >
+          <Link href={`/items?${nextQuery}`} className={`rounded border px-3 py-1 ${page >= totalPages ? "pointer-events-none opacity-50" : ""}`}>
             Next
           </Link>
         </div>
